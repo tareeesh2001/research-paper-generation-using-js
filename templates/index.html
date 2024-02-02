@@ -1,0 +1,301 @@
+<!-- index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Paper Outline Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"], button {
+            padding: 10px;
+            margin-bottom: 10px;
+            width: 100%; /* Make the text box full width */
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #outlineResult {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            max-height: 300px; /* Set a fixed height */
+            overflow: auto; /* Enable scroll if needed */
+        }
+        #checkboxForm {
+            display: none;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        .checkbox-menu {
+            list-style: none;
+            padding: 0;
+        }
+        #checkboxForm .checkbox-menu {
+            max-height: 300px; /* Set a maximum height */
+            overflow-y: auto; /* Enable vertical scroll if needed */
+        }
+        .checkbox-group {
+            background-color: #9fd8df; /* Set a background color for headings */
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            background-color: #e6d59d; /* Set a background color for sub-headings */
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .checkbox-item input {
+            margin-right: 5px;
+        }
+        .select-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .select-all-button,
+        .unselect-all-button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .generate-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px 0;
+        }
+        .collapse-button {
+            background-color: #ddd;
+            color: #333;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5); /* Semi-transparent black overlay */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000; /* Ensure the overlay is on top of other elements */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Research Paper Outline Generator</h1>
+    <form id="researchForm">
+        <label for="researchTopic">Enter the topic of your research paper:</label>
+        <input type="text" id="researchTopic" name="researchTopic" required>
+        <button type="button" onclick="generateOutline()">Generate Outline</button>
+    </form>
+
+    <div id="outlineResult"></div>
+
+    <div id="checkboxForm">
+        <h2>Select Headings and Sub-Headings:</h2>
+        <div class="select-buttons">
+            <button type="button" class="select-all-button" onclick="selectAllCheckboxes()">Select All</button>
+            <button type="button" class="unselect-all-button" onclick="unselectAllCheckboxes()" style="display: none;">Unselect All</button>
+        </div>
+        <ul class="checkbox-menu" id="checkboxes"></ul>
+        <button type="button" onclick="generateSelectedContent()" class="generate-button">Generate Content</button>
+    </div>
+
+    <script>
+        function generateOutline() {
+            var topic = document.getElementById("researchTopic").value;
+
+            // Create overlay div
+            var overlay = document.createElement("div");
+            overlay.className = "overlay";
+            overlay.innerHTML = '<div class="loader"></div>';
+
+            // Append overlay to the body
+            document.body.appendChild(overlay);
+
+            // // Display loader while waiting for the response
+            // document.getElementById("outlineResult").innerHTML = '<div class="loader"></div>';
+
+            fetch('/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: topic })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("outlineResult").innerHTML = formatOutline(data.response);
+                createCheckboxes(data.response);
+                // Remove the overlay when content is loaded
+                overlay.remove();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById("outlineResult").innerHTML = '<p>Error fetching data. Please try again.</p>';
+                // Remove the overlay when content is loaded
+                overlay.remove();
+            });
+        }
+
+        function formatOutline(outline) {
+            // Format the outline for better readability
+            return '<pre>' + outline + '</pre>';
+        }
+
+        function createCheckboxes(outline) {
+            var checkboxesMenu = document.getElementById("checkboxes");
+            checkboxesMenu.innerHTML = "";  // Clear previous checkboxes
+
+            var lines = outline.split('\n');
+            var currentGroup = null;
+
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+
+                if (line !== "") {
+                    var checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.name = "headingCheckbox";
+                    checkbox.value = line;
+                    checkbox.id = "checkbox" + i;
+
+                    var label = document.createElement("label");
+                    label.htmlFor = "checkbox" + i;
+                    label.appendChild(document.createTextNode(line));
+
+                    var checkboxItem = document.createElement("li");
+                    checkboxItem.className = "checkbox-item";
+                    checkboxItem.appendChild(checkbox);
+                    checkboxItem.appendChild(label);
+
+                    if (line.startsWith("## ")) {
+                        // Heading
+                        checkboxItem.style.fontWeight = "bold";
+                        currentGroup = document.createElement("ul");
+                        currentGroup.className = "checkbox-group";
+                        checkboxesMenu.appendChild(currentGroup);
+                    }
+
+                    if (currentGroup) {
+                        currentGroup.appendChild(checkboxItem);
+                    } else {
+                        checkboxesMenu.appendChild(checkboxItem);
+                    }
+                }
+            }
+
+            document.getElementById("checkboxForm").style.display = "block";
+            document.querySelector('.unselect-all-button').style.display = "none"; // Hide unselect all button initially
+        }
+
+        function selectAllCheckboxes() {
+            var checkboxes = document.getElementsByName("headingCheckbox");
+            for (var i = 0; i < checkboxes.length; i++) {
+                checkboxes[i].checked = true;
+            }
+
+            toggleSelectButtons(true);
+        }
+
+        function unselectAllCheckboxes() {
+            var checkboxes = document.getElementsByName("headingCheckbox");
+            for (var i = 0; i < checkboxes.length; i++) {
+                checkboxes[i].checked = false;
+            }
+
+            toggleSelectButtons(false);
+        }
+
+        function toggleSelectButtons(selectAll) {
+            document.querySelector('.select-all-button').style.display = selectAll ? "none" : "block";
+            document.querySelector('.unselect-all-button').style.display = selectAll ? "block" : "none";
+        }
+
+        function generateSelectedContent() {
+            var selectedHeadings = [];
+            var checkboxes = document.getElementsByName("headingCheckbox");
+            for (var i = 0; i < checkboxes.length; i++) {
+                if (checkboxes[i].checked) {
+                    selectedHeadings.push(checkboxes[i].value);
+                }
+            }
+            // Create overlay div
+            var overlay = document.createElement("div");
+            overlay.className = "overlay";
+            overlay.innerHTML = '<div class="loader"></div>';
+
+            // Append overlay to the body
+            document.body.appendChild(overlay);
+
+            // Redirect to a different page with selected headings
+            window.location.href = "/generate-content?headings=" + encodeURIComponent(JSON.stringify(selectedHeadings));
+        }
+        window.onpageshow = function (event) {
+            if (event.persisted) {
+                // Check if the page is navigated back
+                var overlay = document.querySelector('.overlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+            }
+        };
+    </script>
+</body>
+</html>
